@@ -1,103 +1,58 @@
 module Views.Inputs exposing (view)
 
-import Html exposing (..)
-import Html.A11y exposing (..)
+import Accessibility exposing (..)
+import Html
+import Html.Attributes exposing (id)
 
 
 view : Html msg
 view =
     div []
-        [ viewTextInputVariations
-        , viewRadioInputVariations
-        , viewCheckboxInputVariations
+        [ viewInputType "Text"
+            { before = [ inputText "Value" [] ]
+            , after = [ inputText "Value" [] ]
+            , hidden = [ inputText "Value" ]
+            }
+        , viewInputType "Radio"
+            { before = [ radio "left" "Value" False [], radio "left" "Value" False [] ]
+            , after = [ radio "right" "Value" False [], radio "right" "Value" False [] ]
+            , hidden = [ radio "invisible" "Value" False, radio "invisible" "Value" False ]
+            }
+        , viewInputType "Checkbox"
+            { before = [ checkbox "value" (Just True) [], checkbox "value" Nothing [], checkbox "value" (Just False) [] ]
+            , after = [ checkbox "value" (Just True) [], checkbox "value" Nothing [], checkbox "value" (Just False) [] ]
+            , hidden = [ checkbox "value" (Just True), checkbox "value" Nothing, checkbox "value" (Just False) ]
+            }
         ]
-
-
-viewTextInputVariations : Html msg
-viewTextInputVariations =
-    let
-        inputModel =
-            { label = text "Text Label"
-            , typeAndValue = textInput "Value"
-            , attributes = []
-            }
-    in
-        viewInputType "Text"
-            { left = [ inputModel ]
-            , right = [ inputModel ]
-            , invisible = [ (,) inputModel ("input-id-text") ]
-            }
-
-
-viewRadioInputVariations : Html msg
-viewRadioInputVariations =
-    let
-        inputModel groupName =
-            { label = text "Radio Label"
-            , typeAndValue = radioInput groupName "Value" False
-            , attributes = []
-            }
-    in
-        viewInputType "Radio"
-            { left = [ inputModel "left", inputModel "left" ]
-            , right = [ inputModel "right", inputModel "right" ]
-            , invisible =
-                [ (,) (inputModel "invisible") ("input-id-radio-1")
-                , (,) (inputModel "invisible") ("input-id-radio-2")
-                ]
-            }
-
-
-viewCheckboxInputVariations : Html msg
-viewCheckboxInputVariations =
-    let
-        inputModel status =
-            { label = text <| "Checkbox Label, Status: " ++ toString status
-            , typeAndValue = checkboxInput "Value" status
-            , attributes = []
-            }
-    in
-        viewInputType "Checkbox"
-            { left = [ inputModel (Just True), inputModel Nothing, inputModel (Just False) ]
-            , right = [ inputModel (Just True), inputModel Nothing, inputModel (Just False) ]
-            , invisible =
-                [ (,) (inputModel (Just True)) ("input-id-checkbox-1")
-                , (,) (inputModel Nothing) ("input-id-checkbox-2")
-                , (,) (inputModel (Just False)) ("input-id-checkbox-3")
-                ]
-            }
 
 
 viewInputType :
     String
-    -> { left : List (Input msg)
-       , right : List (Input msg)
-       , invisible : List ( Input msg, String )
-       }
+    ->
+        { before : List (Html msg)
+        , after : List (Html msg)
+        , hidden : List (List (Html.Attribute msg) -> Html msg)
+        }
     -> Html msg
-viewInputType name { left, right, invisible } =
+viewInputType inputType { before, after, hidden } =
     div []
-        [ h3 [] [ text <| name ++ " Inputs" ]
-        , leftLabeledInputHeader
-        , div [] (List.map leftLabeledInput left)
-        , rightLabeledInputHeader
-        , div [] (List.map rightLabeledInput right)
-        , invisibleLabeledInputHeader
-        , div [] (List.map (uncurry invisibleLabeledInput) invisible)
-        , br [] []
+        [ h3 [] [ text (inputType ++ " Inputs") ]
+        , h4 [] [ text "labelBefore:" ]
+        , div [] (List.map (labelBefore [] (text "Label")) before)
+        , h4 [] [ text "labelAfter:" ]
+        , div [] (List.map (labelAfter [] (text "Label")) after)
+        , h4 [] [ text "labelHidden:" ]
+        , div [] (List.indexedMap (viewHidden inputType) hidden)
         ]
 
 
-leftLabeledInputHeader : Html msg
-leftLabeledInputHeader =
-    h4 [] [ text "leftLabeledInput:" ]
-
-
-rightLabeledInputHeader : Html msg
-rightLabeledInputHeader =
-    h4 [] [ text "rightLabeledInput:" ]
-
-
-invisibleLabeledInputHeader : Html msg
-invisibleLabeledInputHeader =
-    h4 [] [ text "invisibleLabeledInput:" ]
+viewHidden : String -> Int -> (List (Html.Attribute msg) -> Html msg) -> Html msg
+viewHidden inputType index viewInput =
+    let
+        hiddenId =
+            "hidden-" ++ String.toLower inputType ++ "-" ++ toString index
+    in
+    labelHidden hiddenId
+        []
+        (text "Label")
+        (viewInput [ id hiddenId ])
